@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dijkstra vs A* 알고리즘 동작 비교 시뮬레이터</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --dijkstra: #2563eb;
+      --dijkstra-soft: #eff6ff;
+      --astar: #7c3aed;
+      --astar-soft: #f5f3ff;
+      --current: #10b981;
+      --frontier: #f59e0b;
+      --path: #e11d48;
+      --trap: #dc2626;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    header h1 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .scenario-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .tab-btn:hover {
+      border-color: #94a3b8;
+      transform: translateY(-1px);
+    }
+
+    .tab-btn.active {
+      border-color: #0f172a;
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    .tab-btn .tab-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .tab-btn .tab-sub {
+      font-size: 0.8rem;
+      opacity: 0.82;
+    }
+
+    .scenario-banner {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid #0f172a;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .controls-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn:hover:not(:disabled) {
+      background: #e2e8f0;
+    }
+
+    .ctrl-btn.primary {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    .ctrl-btn.primary:hover:not(:disabled) {
+      background: #334155;
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1.5px solid rgba(0,0,0,0.2);
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .algo-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-header.dijkstra { background: var(--dijkstra-soft); }
+    .panel-header.astar { background: var(--astar-soft); }
+
+    .panel-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+    .panel-header.dijkstra .panel-title { color: var(--dijkstra); }
+    .panel-header.astar .panel-title { color: var(--astar); }
+
+    .formula-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      font-weight: 700;
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--border);
+      background: #fcfcfd;
+    }
+
+    .metric-box {
+      padding: 9px 10px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .metric-box:last-child { border-right: none; }
+
+    .metric-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: block;
+    }
+
+    .metric-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .svg-wrap {
+      padding: 10px 12px 4px;
+      background: #ffffff;
+    }
+
+    svg {
+      width: 100%;
+      height: 310px;
+      display: block;
+    }
+
+    .pq-section {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: #f8fafc;
+      min-height: 72px;
+    }
+
+    .section-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .pq-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .pq-item {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      padding: 4px 9px;
+      border-radius: 7px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      font-weight: 700;
+    }
+
+    .pq-item.top {
+      border-color: var(--frontier);
+      background: #fffbeb;
+      color: #b45309;
+    }
+
+    .pq-item.stale {
+      opacity: 0.45;
+      text-decoration: line-through;
+    }
+
+    .pq-empty {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .explain-box {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      background: #ffffff;
+      min-height: 112px;
+      font-size: 0.88rem;
+    }
+
+    .explain-box .step-tag {
+      display: inline-block;
+      font-size: 0.74rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .explain-box .step-tag.done {
+      background: #ffe4e6;
+      color: #be123c;
+    }
+
+    .explain-box p {
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .explain-box .reason {
+      color: #475569;
+      font-size: 0.83rem;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 22px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    .summary-card h2 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      text-align: center;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+    }
+
+    td.left { text-align: left; }
+
+    .badge-win {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+    .badge-astar { background: var(--astar-soft); color: var(--astar); }
+    .badge-tie { background: #f1f5f9; color: #334155; }
+    .badge-trap { background: #fef2f2; color: #b91c1c; }
+
+    @media (max-width: 980px) {
+      .split-grid { grid-template-columns: 1fr; }
+      .scenario-tabs { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Dijkstra vs A* 최단 경로 알고리즘 내부 동작 시각화 비교</h1>
+      <p>
+        동일한 그래프(정점 7~8개, 허용 가능·일관적 휴리스틱 <em>h(v)</em> 적용)에서
+        <strong>우선순위 큐(Min-Heap) 정렬 기준의 차이</strong>(<code>g(v)</code> vs <code>f(v)=g(v)+h(v)</code>)가
+        탐색 순서와 연산량에 미치는 영향을 3가지 시나리오로 비교합니다.
+      </p>
+    </header>
+
+    <div class="scenario-tabs">
+      <button class="tab-btn active" onclick="selectScenario('1')" id="tab-1">
+        <span class="tab-title">시나리오 1: 표준 계층 그래프</span>
+        <span class="tab-sub">비슷한 성능 · 정점 7개 · 최적 비용 12</span>
+      </button>
+      <button class="tab-btn" onclick="selectScenario('2')" id="tab-2">
+        <span class="tab-title">시나리오 2: 방사형 확장 그래프</span>
+        <span class="tab-sub">A* 압승 (방문 정점 50% 감소) · 정점 8개 · 최적 비용 12</span>
+      </button>
+      <button class="tab-btn" onclick="selectScenario('3')" id="tab-3">
+        <span class="tab-title">시나리오 3: 막다른 함정/우회 그래프</span>
+        <span class="tab-sub">휴리스틱 배신 (탐색 순서 역전 &amp; 이점 상실) · 정점 8개 · 최적 비용 15</span>
+      </button>
+    </div>
+
+    <div class="scenario-banner" id="scenario-banner"></div>
+
+    <div class="controls-bar">
+      <div class="btn-group">
+        <button class="ctrl-btn" onclick="goFirst()" id="btn-first">⏮ 처음</button>
+        <button class="ctrl-btn" onclick="prevStep()" id="btn-prev">◀ 이전 단계</button>
+        <button class="ctrl-btn primary" onclick="nextStep()" id="btn-next">▶ 다음 단계</button>
+        <button class="ctrl-btn" onclick="togglePlay()" id="btn-play">⏯ 자동 재생</button>
+        <button class="ctrl-btn" onclick="goLast()" id="btn-last">⏭ 끝까지</button>
+      </div>
+
+      <div class="step-indicator">
+        <span id="step-text">Step 0 / 0</span>
+      </div>
+
+      <div class="legend">
+        <span class="legend-item"><span class="dot" style="background:#ffffff"></span>미방문</span>
+        <span class="legend-item"><span class="dot" style="background:#fef3c7; border-color:#f59e0b"></span>PQ 대기(후보)</span>
+        <span class="legend-item"><span class="dot" style="background:#10b981; border-color:#047857"></span>현재 확장 중</span>
+        <span class="legend-item"><span class="dot" style="background:#dbeafe; border-color:#2563eb"></span>확정 완료</span>
+        <span class="legend-item"><span class="dot" style="background:#ffe4e6; border-color:#e11d48"></span>최단 경로</span>
+      </div>
+    </div>
+
+    <div class="split-grid">
+      <!-- Dijkstra Panel -->
+      <section class="algo-panel">
+        <div class="panel-header dijkstra">
+          <span class="panel-title">Dijkstra 알고리즘 (Blind Search)</span>
+          <span class="formula-badge">우선순위 = g(v)</span>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-box"><span class="metric-label">확정 정점 수</span><span class="metric-val" id="d-visited">0</span></div>
+          <div class="metric-box"><span class="metric-label">PQ 추출 횟수</span><span class="metric-val" id="d-pops">0</span></div>
+          <div class="metric-box"><span class="metric-label">간선 완화 횟수</span><span class="metric-val" id="d-relax">0</span></div>
+          <div class="metric-box"><span class="metric-label">휴리스틱 연산</span><span class="metric-val" id="d-heval">0</span></div>
+        </div>
+        <div class="svg-wrap">
+          <svg id="svg-dijkstra" viewBox="0 0 580 350"></svg>
+        </div>
+        <div class="pq-section">
+          <div class="section-label">
+            <span>우선순위 큐 (Min-Heap) 상태</span>
+            <span>형식: (g, 정점)</span>
+          </div>
+          <div class="pq-list" id="pq-dijkstra"></div>
+        </div>
+        <div class="explain-box" id="exp-dijkstra"></div>
+      </section>
+
+      <!-- A* Panel -->
+      <section class="algo-panel">
+        <div class="panel-header astar">
+          <span class="panel-title">A* 알고리즘 (Informed Search)</span>
+          <span class="formula-badge">우선순위 = f(v) = g(v) + h(v)</span>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-box"><span class="metric-label">확정 정점 수</span><span class="metric-val" id="a-visited">0</span></div>
+          <div class="metric-box"><span class="metric-label">PQ 추출 횟수</span><span class="metric-val" id="a-pops">0</span></div>
+          <div class="metric-box"><span class="metric-label">간선 완화 횟수</span><span class="metric-val" id="a-relax">0</span></div>
+          <div class="metric-box"><span class="metric-label">휴리스틱 연산</span><span class="metric-val" id="a-heval">0</span></div>
+        </div>
+        <div class="svg-wrap">
+          <svg id="svg-astar" viewBox="0 0 580 350"></svg>
+        </div>
+        <div class="pq-section">
+          <div class="section-label">
+            <span>우선순위 큐 (Min-Heap) 상태</span>
+            <span>형식: (f=g+h, 정점)</span>
+          </div>
+          <div class="pq-list" id="pq-astar"></div>
+        </div>
+        <div class="explain-box" id="exp-astar"></div>
+      </section>
+    </div>
+
+    <section class="summary-card">
+      <h2>3가지 시나리오 종합 비교 (허용 가능·일관적 휴리스틱 h(v) ≤ h*(v) 검증 완료)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>시나리오</th>
+            <th>정점 / 간선</th>
+            <th>최적 비용</th>
+            <th>Dijkstra 확정 정점 (순서)</th>
+            <th>A* 확정 정점 (순서)</th>
+            <th>비교 결론</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="left"><strong>1. 표준 계층 그래프</strong></td>
+            <td>7 / 9</td>
+            <td>12</td>
+            <td><strong>7개</strong> (S→A→B→C→E→D→G)</td>
+            <td><strong>6개</strong> (S→A→B→E→C→G)</td>
+            <td><span class="badge-win badge-tie">거의 비슷함 (1개 차이)</span></td>
+          </tr>
+          <tr>
+            <td class="left"><strong>2. 방사형 확장 그래프</strong></td>
+            <td>8 / 10</td>
+            <td>12</td>
+            <td><strong>8개</strong> (S→B→A→C→D→E→F→G)</td>
+            <td><strong>4개</strong> (S→E→F→G)</td>
+            <td><span class="badge-win badge-astar">A* 압승 (확정 50% 절감)</span></td>
+          </tr>
+          <tr>
+            <td class="left"><strong>3. 막다른 함정/우회 그래프</strong></td>
+            <td>8 / 8</td>
+            <td>15</td>
+            <td><strong>8개</strong> (S→A→B→E→C→D→F→G)</td>
+            <td><strong>8개</strong> (S→A→B→C→D→E→F→G)</td>
+            <td><span class="badge-win badge-trap">휴리스틱 배신 (절감 0% + h 오버헤드)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    const SCENARIOS = {
+      "1": {
+        name: "시나리오 1: 표준 계층 그래프 (비슷한 성능)",
+        desc: "출발지(S)에서 목적지(G) 방향으로 자연스럽게 이어지는 도로망입니다. 반대 방향 간선이나 함정이 없어 두 알고리즘의 탐색 정점 수(7개 vs 6개)가 거의 비슷하게 나타납니다.",
+        nodes: {
+          S: { x: 75,  y: 175, h: 9 },
+          A: { x: 205, y: 80,  h: 6 },
+          B: { x: 205, y: 270, h: 6 },
+          C: { x: 355, y: 80,  h: 4 },
+          E: { x: 355, y: 175, h: 3 },
+          D: { x: 355, y: 270, h: 4 },
+          G: { x: 495, y: 175, h: 0 }
+        },
+        edges: [
+          ["S", "A", 4], ["S", "B", 5],
+          ["A", "C", 4], ["A", "E", 4],
+          ["B", "D", 4], ["B", "E", 3],
+          ["C", "G", 5], ["E", "G", 4], ["D", "G", 5]
+        ]
+      },
+      "2": {
+        name: "시나리오 2: 방사형 확장 그래프 (A* 압승)",
+        desc: "출발지(S)의 반대 방향(왼쪽 A, B, C, D)에 가중치가 1~3으로 매우 작은 간선들이 밀집해 있습니다. Dijkstra는 가까운 반대쪽을 전부 탐색(8개)하지만, A*는 휴리스틱 h(v)로 목적지 방향(S→E→F→G, 4개)만 직진합니다.",
+        nodes: {
+          S: { x: 230, y: 175, h: 12 },
+          A: { x: 125, y: 70,  h: 13 },
+          B: { x: 75,  y: 175, h: 13 },
+          C: { x: 125, y: 280, h: 13 },
+          D: { x: 225, y: 300, h: 13 },
+          E: { x: 335, y: 175, h: 8  },
+          F: { x: 430, y: 175, h: 4  },
+          G: { x: 520, y: 175, h: 0  }
+        },
+        edges: [
+          ["S", "A", 2], ["S", "B", 1], ["S", "C", 2], ["S", "D", 3],
+          ["A", "B", 2], ["B", "C", 2], ["C", "D", 2],
+          ["S", "E", 4], ["E", "F", 4], ["F", "G", 4]
+        ]
+      },
+      "3": {
+        name: "시나리오 3: 막다른 함정/우회 그래프 (휴리스틱 배신)",
+        desc: "목적지(G)를 향해 직선으로 뻗은 길(A→B→C→D) 끝에 고비용 구간(D→G=20)이 숨어 있습니다. A*는 f=10이라는 휴리스틱에 속아 함정 끝(D)까지 먼저 파고든 뒤에야 우회로(E→F→G)로 돌아오며, 결국 Dijkstra와 동일하게 8개 정점을 모두 탐색합니다.",
+        nodes: {
+          S: { x: 65,  y: 235, h: 10 },
+          A: { x: 160, y: 235, h: 8  },
+          B: { x: 255, y: 235, h: 6  },
+          C: { x: 350, y: 235, h: 4  },
+          D: { x: 445, y: 235, h: 2  },
+          E: { x: 165, y: 80,  h: 9  },
+          F: { x: 345, y: 80,  h: 5  },
+          G: { x: 520, y: 155, h: 0  }
+        },
+        edges: [
+          ["S", "A", 2], ["A", "B", 2], ["B", "C", 2], ["C", "D", 2], ["D", "G", 20],
+          ["S", "E", 5], ["E", "F", 5], ["F", "G", 5]
+        ]
+      }
+    };
+
+    function buildTrace(sc, useHeuristic) {
+      const adj = {};
+      Object.keys(sc.nodes).forEach(u => adj[u] = []);
+      sc.edges.forEach(([u, v, w]) => {
+        adj[u].push({ to: v, w });
+        adj[v].push({ to: u, w });
+      });
+
+      const g = {};
+      const parent = {};
+      Object.keys(sc.nodes).forEach(u => { g[u] = Infinity; parent[u] = null; });
+      g["S"] = 0;
+
+      const visited = new Set();
+      let hEval = useHeuristic ? 1 : 0;
+      const h0 = useHeuristic ? sc.nodes["S"].h : 0;
+      let pq = [{ key: 0 + h0, g: 0, h: h0, node: "S" }];
+      let pops = 0;
+      let relax = 0;
+
+      const steps = [];
+      const snapshot = (current, activeEdges, title, detail, reason, done = false, pathNodes = [], pathEdges = []) => {
+        const sortedPQ = [...pq].sort((a, b) => a.key - b.key || a.g - b.g || a.node.localeCompare(b.node));
+        steps.push({
+          g: { ...g },
+          parent: { ...parent },
+          visited: new Set(visited),
+          pq: sortedPQ.map(item => ({ ...item, stale: visited.has(item.node) })),
+          current,
+          activeEdges: [...activeEdges],
+          pops,
+          relax,
+          hEval,
+          title,
+          detail,
+          reason,
+          done,
+          pathNodes,
+          pathEdges
+        });
+      };
+
+      snapshot(
+        null, [],
+        "초기화 (Step 0)",
+        useHeuristic
+          ? `출발점 S의 거리를 g(S)=0으로 설정하고, f(S)=0+h(S)=${h0}으로 우선순위 큐(PQ)에 삽입했습니다.`
+          : `출발점 S의 거리를 g(S)=0으로 설정하고, (0, S)를 우선순위 큐(PQ)에 삽입했습니다.`,
+        useHeuristic
+          ? "A*는 실제 거리 g(v)에 목적지까지 남은 예상 거리 h(v)를 더한 f(v)를 기준으로 탐색을 시작합니다."
+          : "Dijkstra는 목적지 위치 정보 없이 출발점으로부터의 실제 누적 거리 g(v)만 기준으로 탐색을 시작합니다."
+      );
+
+      while (pq.length > 0) {
+        pq.sort((a, b) => a.key - b.key || a.g - b.g || a.node.localeCompare(b.node));
+        const top = pq.shift();
+        pops++;
+
+        if (visited.has(top.node)) {
+          snapshot(
+            top.node, [],
+            `낡은 항목 폐기 (PQ Pop #${pops})`,
+            `PQ에서 꺼낸 정점 ${top.node}는 이미 더 짧은 경로로 최단 거리가 확정되어 무시합니다.`,
+            "우선순위 큐에서 감소 연산(decrease-key) 대신 새 항목을 삽입하는 표준 구현에서는 이미 확정된 정점을 꺼낼 때 버립니다."
+          );
+          continue;
+        }
+
+        visited.add(top.node);
+
+        if (top.node === "G") {
+          const pathNodes = [];
+          const pathEdges = [];
+          let cur = "G";
+          while (cur) {
+            pathNodes.unshift(cur);
+            if (parent[cur]) pathEdges.push([parent[cur], cur]);
+            cur = parent[cur];
+          }
+          snapshot(
+            "G", [],
+            `목적지 G 확정 — 탐색 종료! (최단 거리: ${g["G"]})`,
+            `PQ 최솟값으로 목적지 G(g=${g["G"]})를 추출했습니다. 최단 경로: ${pathNodes.join(" → ")}`,
+            useHeuristic
+              ? `허용 가능 휴리스틱(h(v) ≤ h*(v)) 덕분에 G가 PQ 최솟값으로 꺼내진 시점에 최적해(비용 ${g["G"]})가 수학적으로 보장됩니다.`
+              : `음수 간선이 없으므로 G가 PQ 최솟값으로 꺼내진 시점에 출발지 S로부터의 최단 거리(${g["G"]})가 확정됩니다.`,
+            true,
+            pathNodes,
+            pathEdges
+          );
+          break;
+        }
+
+        const relaxedList = [];
+        const activeEdges = [];
+        for (const { to, w } of adj[top.node]) {
+          if (visited.has(to)) continue;
+          activeEdges.push([top.node, to]);
+          const candG = top.g + w;
+          if (candG < g[to]) {
+            g[to] = candG;
+            parent[to] = top.node;
+            relax++;
+            const hv = useHeuristic ? sc.nodes[to].h : 0;
+            if (useHeuristic) hEval++;
+            const fVal = candG + hv;
+            pq.push({ key: fVal, g: candG, h: hv, node: to });
+            relaxedList.push(useHeuristic ? `${to}(g=${candG}, f=${fVal})` : `${to}(g=${candG})`);
+          }
+        }
+
+        const detailText = relaxedList.length > 0
+          ? `PQ 최솟값 정점 ${top.node}(${useHeuristic ? `f=${top.key}=g(${top.g})+h(${top.h})` : `g=${top.g}`})를 확정하고, 이웃 ${relaxedList.join(", ")}의 거리를 갱신해 PQ에 삽입했습니다.`
+          : `PQ 최솟값 정점 ${top.node}(${useHeuristic ? `f=${top.key}` : `g=${top.g}`})를 확정했으나, 더 짧게 갱신할 미방문 이웃이 없습니다.`;
+
+        const reasonText = useHeuristic
+          ? `현재 PQ에 대기 중인 후보 중 예상 총비용 f(v)=g(v)+h(v)가 가장 작은 ${top.node}가 목적지까지 가장 유망하다고 판단해 먼저 확장했습니다.`
+          : `목적지 방향을 모르므로 현재 PQ 후보 중 출발지 S로부터 실제 거리 g(v)가 가장 짧은 ${top.node}를 탐욕적으로 먼저 확정했습니다.`;
+
+        snapshot(
+          top.node, activeEdges,
+          `정점 ${top.node} 확정 및 이웃 갱신 (확정 ${visited.size}개)`,
+          detailText,
+          reasonText
+        );
+      }
+
+      return steps;
+    }
+
+    let currentScenarioId = "1";
+    let dTrace = [];
+    let aTrace = [];
+    let stepIdx = 0;
+    let playTimer = null;
+
+    function selectScenario(id) {
+      stopPlay();
+      currentScenarioId = id;
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.getElementById("tab-" + id).classList.add("active");
+
+      const sc = SCENARIOS[id];
+      document.getElementById("scenario-banner").innerHTML = `
+        <div><strong>${sc.name}</strong> — ${sc.desc}</div>
+      `;
+
+      dTrace = buildTrace(sc, false);
+      aTrace = buildTrace(sc, true);
+      stepIdx = 0;
+      render();
+    }
+
+    function getMaxSteps() {
+      return Math.max(dTrace.length, aTrace.length) - 1;
+    }
+
+    function renderGraph(svgId, sc, state, useHeuristic) {
+      const svg = document.getElementById(svgId);
+      svg.innerHTML = "";
+
+      const NS = "http://www.w3.org/2000/svg";
+      const makeEl = (tag, attrs = {}) => {
+        const el = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+        return el;
+      };
+
+      const isSameEdge = (e1, e2) =>
+        (e1[0] === e2[0] && e1[1] === e2[1]) || (e1[0] === e2[1] && e1[1] === e2[0]);
+
+      // Draw edges
+      sc.edges.forEach(([u, v, w]) => {
+        const p1 = sc.nodes[u];
+        const p2 = sc.nodes[v];
+        const isPath = state.pathEdges.some(pe => isSameEdge(pe, [u, v]));
+        const isActive = state.activeEdges.some(ae => isSameEdge(ae, [u, v]));
+        const isTrapEdge = currentScenarioId === "3" && isSameEdge([u, v], ["D", "G"]);
+
+        let stroke = "#cbd5e1";
+        let width = 2.5;
+        let dash = "";
+        if (isTrapEdge) { stroke = "#fca5a5"; dash = "6,4"; }
+        if (isActive) { stroke = "#f59e0b"; width = 3.5; dash = ""; }
+        if (isPath) { stroke = "#e11d48"; width = 5; dash = ""; }
+
+        svg.appendChild(makeEl("line", {
+          x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y,
+          stroke, "stroke-width": width, "stroke-dasharray": dash
+        }));
+
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+        svg.appendChild(makeEl("rect", {
+          x: mx - 13, y: my - 10, width: 26, height: 20, rx: 6,
+          fill: isTrapEdge ? "#fef2f2" : "#ffffff",
+          stroke: isPath ? "#e11d48" : (isTrapEdge ? "#dc2626" : "#cbd5e1"),
+          "stroke-width": 1.4
+        }));
+        const wt = makeEl("text", {
+          x: mx, y: my + 4, "text-anchor": "middle",
+          "font-size": "11.5", "font-weight": "700",
+          fill: isTrapEdge ? "#b91c1c" : (isPath ? "#e11d48" : "#334155")
+        });
+        wt.textContent = w;
+        svg.appendChild(wt);
+      });
+
+      // Draw nodes
+      const frontierSet = new Set(state.pq.filter(x => !x.stale).map(x => x.node));
+      Object.entries(sc.nodes).forEach(([id, pos]) => {
+        const isCurrent = state.current === id;
+        const isVisited = state.visited.has(id);
+        const isPath = state.pathNodes.includes(id);
+        const isFrontier = frontierSet.has(id);
+
+        let fill = "#ffffff";
+        let stroke = "#64748b";
+        let sw = 2.2;
+        let textColor = "#0f172a";
+
+        if (isFrontier) { fill = "#fef3c7"; stroke = "#f59e0b"; sw = 2.8; }
+        if (isVisited) { fill = "#dbeafe"; stroke = "#2563eb"; sw = 2.6; }
+        if (isCurrent) { fill = "#10b981"; stroke = "#047857"; sw = 3.2; textColor = "#ffffff"; }
+        if (isPath && state.done) { fill = "#ffe4e6"; stroke = "#e11d48"; sw = 3.4; textColor = "#9f1239"; }
+
+        svg.appendChild(makeEl("circle", {
+          cx: pos.x, cy: pos.y, r: 22,
+          fill, stroke, "stroke-width": sw
+        }));
+
+        const label = makeEl("text", {
+          x: pos.x, y: pos.y + 5, "text-anchor": "middle",
+          "font-size": "14", "font-weight": "800", fill: textColor
+        });
+        label.textContent = id;
+        svg.appendChild(label);
+
+        // Info badge below/above node
+        const gVal = state.g[id] === Infinity ? "∞" : state.g[id];
+        const infoText = useHeuristic
+          ? `g=${gVal} | h=${pos.h}`
+          : `g=${gVal}`;
+
+        const badgeY = pos.y < 100 ? pos.y - 32 : pos.y + 35;
+        const bw = useHeuristic ? 74 : 42;
+        svg.appendChild(makeEl("rect", {
+          x: pos.x - bw / 2, y: badgeY - 11, width: bw, height: 17, rx: 5,
+          fill: "#f8fafc", stroke: "#cbd5e1", "stroke-width": 1
+        }));
+        const bt = makeEl("text", {
+          x: pos.x, y: badgeY + 1.5, "text-anchor": "middle",
+          "font-size": "10.5", "font-weight": "700",
+          fill: state.g[id] === Infinity ? "#94a3b8" : "#0f172a"
+        });
+        bt.textContent = infoText;
+        svg.appendChild(bt);
+      });
+    }
+
+    function renderPQ(elId, state, useHeuristic) {
+      const el = document.getElementById(elId);
+      if (state.pq.length === 0) {
+        el.innerHTML = `<span class="pq-empty">큐가 비어 있음</span>`;
+        return;
+      }
+      let topMarked = false;
+      el.innerHTML = state.pq.map(item => {
+        let cls = "pq-item";
+        if (item.stale) cls += " stale";
+        else if (!topMarked) { cls += " top"; topMarked = true; }
+        const text = useHeuristic
+          ? `(f=${item.key}=${item.g}+${item.h}, ${item.node})`
+          : `(g=${item.g}, ${item.node})`;
+        return `<span class="${cls}">${text}</span>`;
+      }).join("");
+    }
+
+    function renderExplain(elId, state, finishedEarlier) {
+      const el = document.getElementById(elId);
+      const tagClass = state.done ? "step-tag done" : "step-tag";
+      const extra = finishedEarlier ? " (이미 탐색 완료)" : "";
+      el.innerHTML = `
+        <span class="${tagClass}">${state.title}${extra}</span>
+        <p>${state.detail}</p>
+        <p class="reason">💡 <strong>이유:</strong> ${state.reason}</p>
+      `;
+    }
+
+    function render() {
+      const sc = SCENARIOS[currentScenarioId];
+      const maxS = getMaxSteps();
+      const dState = dTrace[Math.min(stepIdx, dTrace.length - 1)];
+      const aState = aTrace[Math.min(stepIdx, aTrace.length - 1)];
+
+      document.getElementById("step-text").textContent = `Step ${stepIdx} / ${maxS}`;
+      document.getElementById("btn-first").disabled = stepIdx === 0;
+      document.getElementById("btn-prev").disabled = stepIdx === 0;
+      document.getElementById("btn-next").disabled = stepIdx === maxS;
+      document.getElementById("btn-last").disabled = stepIdx === maxS;
+
+      // Metrics
+      document.getElementById("d-visited").textContent = dState.visited.size;
+      document.getElementById("d-pops").textContent = dState.pops;
+      document.getElementById("d-relax").textContent = dState.relax;
+      document.getElementById("d-heval").textContent = dState.hEval;
+
+      document.getElementById("a-visited").textContent = aState.visited.size;
+      document.getElementById("a-pops").textContent = aState.pops;
+      document.getElementById("a-relax").textContent = aState.relax;
+      document.getElementById("a-heval").textContent = aState.hEval;
+
+      renderGraph("svg-dijkstra", sc, dState, false);
+      renderGraph("svg-astar", sc, aState, true);
+
+      renderPQ("pq-dijkstra", dState, false);
+      renderPQ("pq-astar", aState, true);
+
+      renderExplain("exp-dijkstra", dState, stepIdx > dTrace.length - 1);
+      renderExplain("exp-astar", aState, stepIdx > aTrace.length - 1);
+    }
+
+    function nextStep() {
+      if (stepIdx < getMaxSteps()) { stepIdx++; render(); }
+      else stopPlay();
+    }
+    function prevStep() {
+      stopPlay();
+      if (stepIdx > 0) { stepIdx--; render(); }
+    }
+    function goFirst() { stopPlay(); stepIdx = 0; render(); }
+    function goLast() { stopPlay(); stepIdx = getMaxSteps(); render(); }
+
+    function togglePlay() {
+      if (playTimer) {
+        stopPlay();
+      } else {
+        if (stepIdx >= getMaxSteps()) stepIdx = 0;
+        document.getElementById("btn-play").textContent = "⏸ 일시 정지";
+        playTimer = setInterval(() => {
+          if (stepIdx < getMaxSteps()) { stepIdx++; render(); }
+          else stopPlay();
+        }, 1200);
+      }
+    }
+
+    function stopPlay() {
+      if (playTimer) {
+        clearInterval(playTimer);
+        playTimer = null;
+      }
+      document.getElementById("btn-play").textContent = "⏯ 자동 재생";
+    }
+
+    // Keyboard shortcuts (Left/Right arrow)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") nextStep();
+      if (e.key === "ArrowLeft") prevStep();
+    });
+
+    selectScenario("1");
+  </script>
+</body>
+</html>
